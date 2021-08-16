@@ -111,15 +111,16 @@ public final AbandonOptions extends SettlementOptions {
 ✅ DO!
   * 클래스에 @Fluent 어노테이션을 붙인다.
   * JavaBean 컨벤션에 따라서 getXXX, setXXX 그리고 isXXX를 사용한다.
-  * raw 데이터로 부터 새로운 모델 인스턴스가 필요할 경우, static 메소드를 포함하고, 그 형식은 from<dataformat> 이다.
-  = ++++
+  * raw 데이터로 부터 새로운 모델 인스턴스가 필요할 경우, static 메소드를 포함하고, 그 형식은 from<dataformat> 이다. 예를 들어, string으로
   
 ⛔️ DO NOT!
-  * ??????
-++++
+  * 
+
   
 ✅ DO!
-  * ??????
+  * 서비스 반환 유형만을 리턴하고 바람직하지 못한 공개 API를 가진 model 클래스를 .implmentation.models 패키지에 넣어라. 인터페이스는 .models 패키지에 넣어야만 하고, 공개 API를 거쳐서 최종 사용자에게 리턴되는 타입이어야 한다.
+  
+  ??
 
   🔵 <code>@Fluent</code>  
   🔵 <code>Chaining of set operations</code>
@@ -138,7 +139,8 @@ public final AbandonOptions extends SettlementOptions {
       EnumType.FOO, EnumType.TWO_WORDS = O  
       EnumType.Foo, EnumType.twoWords = X  
 
-  ??
+ ✔️ YOU MAY?
+  * azure-core에 정의되어 있는 ExpandableStringEnum을 사용하라. ??
   
   
 🔵 Enum의 문제점?
@@ -227,7 +229,45 @@ public final class PhoneNumber {
   
   ✅ DO!
   * Azure Core 라이브러리에 있는 인증 정책 구현을 사용하라.
-  * 
+  * 드물지만, 서비스가 Azure Active Directory 인증을 지원하지 않는 경우에 토큰 인증이 필요함을 API에 나타내라.
+  
+     * Azure Active Directory Oauth 서비스들은 커스텀한 인증 스키마를 제공한다. 이러한 경우에 아래 가이드를 따른다.
+  
+  ✅ DO!
+  * 서비스가 지원하는 모든 인증 체계를 지원하라.
+  * 클라이언트가 커스텀 인증 체계를 가지고 인증을 요청할 수 있는 공용 사용자 자격 증명 타입을 정의하라.
+  
+  ⚠️ YOU SHOULD NOT!
+  * Azure Core의 토큰 자격 증명 추상 클래스를 상속받거나, 구현해서 커스텀 인증 타입을 정의하면 안된다. 특히 타입 안정성 언어에서, extend나 implement하면 타입 안정성을 손상시켜 사용자가 잘못된 서비스의 사용자 자격 증명을 인스턴스화 할 수 있도록 하기 때문에 해서는 안된다. ??
+  
+  ✅ DO!
+  * Azure Core나 Azure Identity가 아니라 클라이언트와 같은 이름과 패키지, 또는 서비스 그룹 이름과 공유하는 패키지로 커스텀 자격 증명 타입을 정의하라. 
+  
+  ⛔️ DO NOT!
+  * azure-identity 라이브러리에 컴파일 영역 의존성을 취하지 말라.
+  
+  ✅ DO!
+  * 커스텀한 자격증명 유형 이름 앞에 서비스 이름이나 서비스 그룹이름을 추가하여 의도적으로 범위와 사용에 대해서 명확하게 나타내라.
+  
+  * 커스텀한 자격 증명 유형의 이름 끝에 Credential을 추가하라. 복수형(Credentials)이 아니라 단수형이어야 한다.
+  * 커스텀 인증 프로토콜에 필요한 모든 테이터를 가지고 있는 커스텀 자격 증명 유형에 대한 생성자나 factory를 정의하라.
+  * 데이터 변동을 받아들이는 update 메소드를 정의하고 원자성, 스레드 안정성을 갖추어 자격 증명 데이터를 업데이트 하라.
+  
+  ⛔️ DO NOT!
+  * 사용자가 직접 데이터를 업데이트할 수 있게 되면 원자성을 깨버리기 때문에 public으로 필드를 set 할 수 있게 하지 말라.
+  
+  ⚠️ YOU SHOULD NOT!
+  * 사용자가 인증체계 데이터에 직접 접근할 수 없도록, 프로퍼티를 public 형태로 정의하지 말라. 최종 사용자는 필요로 하지않는 경우가 거의 대부분이고, 스레드 안정성을 사용하기가 어렵다. 인증 데이터를 노출해야만 하는 경우, 인증 요청에 필요한 모든 데이터는 일관된 상태로 데이터를 리턴하는것을 보장하는 단일 API로 제공해야 한다.
+  
+  ✅ DO!
+  * 모든 자격 증명 타입을 받아들이는 서비스 클라이언트 생성자나 팩토리를 제공하라.
+  
+  클라이언트 라이브러리는 서비스가 사용자에게 포탈이나 다른 도구들을 통해서 연결 문자열을 제공하는 경우에서만 연결 문자열을 통해서 인증체계 데이터를 제공하는 것을 지원한다. 연결 문자열은 포탈에서 복사/붙여넣기를 통해 애플리케이션에 쉽게 통합할 수 있도록 해준다. 하지만, 연결 문자열은 인증 정보가 실행중인 프로세스 내에서 순환될 수 없기 떄문에 낮은 인증 형태로 여겨진다.
+  ??
+  
+  ⛔️ DO NOT!
+  * Azure Potal 또는 CLI에서 이러한 문자열을 사용할 수 없다면, 연결 문자열을 가지고 서비스 클라이언트를 생성하는 것을 지원하지 말라.
+  
   
 ### Namespaces
   클라우드 환경에서 서비스를 그룹화 하는 것은 검색과 참조 문서의 구조를 제공하는 것을 목표로 한다.??
